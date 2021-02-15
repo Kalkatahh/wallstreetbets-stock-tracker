@@ -1,0 +1,6 @@
+psaw
+psycopg2
+alpaca_trade_api
+requests
+asyncpg
+aiohttp
