@@ -1,5 +1,5 @@
 psaw
-psycopg2
+psycopg2-binary #old was just psycopg2
 alpaca_trade_api
 requests
 asyncpg

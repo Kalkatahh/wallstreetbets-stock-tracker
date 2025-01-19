@@ -1,8 +1,9 @@
-from psaw import PushshiftAPI
+import praw
 import config
 import datetime 
 import psycopg2
 import psycopg2.extras
+from requests import Session
 
 connection = psycopg2.connect(
     host=config.DB_HOST, database=config.DB_NAME, user=config.DB_USER, password=config.DB_PASS)
@@ -18,15 +19,23 @@ stocks = {}
 for row in rows:
     stocks['$' + row['symbol']] = row['id']
 
+session = Session()
+reddit = praw.Reddit( 
+    client_id= config.CLIENT_ID,
+    client_secret= config.CLIENT_SECRET,
+    user_agent= config.USER_AGENT,
+    username= config.REDDIT_USERNAME,
+    password= config.REDDIT_PASSWORD,
+    requestor_kwargs={"session": session},
+)
 
 
-api = PushshiftAPI()
+
+subreddit = reddit.subreddit('wallstreetbets')
+
+submissions = subreddit.new(limit=None)  # Fetch new posts
 
 start_time = int(datetime.datetime(2021, 2, 14).timestamp())
-
-submissions = api.search_submissions(after=start_time,
-                                     subreddit='wallstreetbets',
-                                     filter =['url', 'author', 'title', 'subreddit'])
 
 for submission in submissions:
     words = submission.title.split()
@@ -36,20 +45,26 @@ for submission in submissions:
         submitted_time = datetime.datetime.fromtimestamp(submission.created_utc).isoformat()
         if len(cashtags) > 0:
             try:
+
                 cursor.execute("""
                     INSERT INTO mention (dt, stock_id, message, source, url)
-                    VALUES (%s,%s, %s, 'wallstreetbets', %s)
-                """, (submitted_time,stocks[cashtag], submission.title, submission.url))
+                    VALUES (%s, %s, %s, 'wallstreetbets', %s)
+                """, (submitted_time, stocks[cashtag], submission.title, submission.url))
+
 
                 connection.commit()
             except Exception as e:
-                print(e)
+                print(f"Error inserting row: {e}")
                 connection.rollback()
-    
-
-mentions = cursor.fetchall()
 
 
+print("All submissions processed successfully!")
 
-for mention in mentions:
-    print(mention)
+
+try:
+    cursor.execute("SELECT * FROM mention")
+    mentions = cursor.fetchall()
+    for mention in mentions:
+        print(mention)
+except Exception as e:
+    print(f"Error fetching data: {e}")
