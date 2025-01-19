@@ -21,9 +21,9 @@ for row in rows:
 
 session = Session()
 reddit = praw.Reddit( 
-    client_id= config.CLIENT_ID,
-    client_secret= config.CLIENT_SECRET,
-    user_agent= config.USER_AGENT,
+    client_id= config.REDDIT_CLIENT_ID,
+    client_secret= config.REDDIT_CLIENT_SECRET,
+    user_agent= config.REDDIT_USER_AGENT,
     username= config.REDDIT_USERNAME,
     password= config.REDDIT_PASSWORD,
     requestor_kwargs={"session": session},
@@ -39,8 +39,7 @@ start_time = int(datetime.datetime(2021, 2, 14).timestamp())
 
 for submission in submissions:
     words = submission.title.split()
-    cashtags = list(set(filter(lambda word: word.lower().startswith('$'), words)))
-
+    cashtags = list(set(filter(lambda word: word.startswith('$') and (len(word) > 1 and not word[1].isdigit()), words)))
     for cashtag in cashtags:
         submitted_time = datetime.datetime.fromtimestamp(submission.created_utc).isoformat()
         if len(cashtags) > 0:
